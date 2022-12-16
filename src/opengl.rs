@@ -38,22 +38,14 @@ pub fn init(draw_function: Option<unsafe fn(&mut Renderer) -> ()>) {
 
     let (mut window, gl_config) = display_builder
         .build(&event_loop, template, |configs| {
-            configs
-                .reduce(|accum, config| {
-                    let transparency_check = config.supports_transparency().unwrap_or(false)
-                        & !accum.supports_transparency().unwrap_or(false);
-
-                    if transparency_check || config.num_samples() > accum.num_samples() {
-                        config
-                    } else {
-                        accum
-                    }
-                })
-                .unwrap()
+            configs.reduce(|_, config| config).unwrap()
         })
         .unwrap();
 
     let raw_window_handle = window.as_ref().map(|window| window.raw_window_handle());
+
+    let window_size = window.as_ref().unwrap().inner_size();
+    println!("Window Size: {} X {}", window_size.width, window_size.height);
 
     let gl_display = gl_config.display();
 
@@ -270,5 +262,5 @@ pub unsafe fn create_shader(
         std::ptr::null(),
     );
     gl.CompileShader(shader);
-    shader
+    return shader;
 }

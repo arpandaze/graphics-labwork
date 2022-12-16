@@ -2,99 +2,40 @@ mod opengl;
 
 use opengl::*;
 
-// pub struct Sphere {
-//     positions: Vec<[f32; 4]>,
-//     indices: Vec<u16>,
-// }
-//
-// impl Sphere {
-//     pub fn new(slices: u16, stacks: u16) -> Sphere {
-//         let size = 2 + slices * (stacks - 1);
-//         let mut positions = Vec::with_capacity(4 * size as usize);
-//
-//         let alpha = std::f32::consts::PI / stacks as f32;
-//         let beta = 2.0 * std::f32::consts::PI / slices as f32;
-//
-//         positions.push([0.0, 0.0, 1.0]);
-//
-//         for i in 1..stacks {
-//             let i = i as f32;
-//             for j in 0..slices {
-//                 let j = j as f32;
-//                 let r = (i * alpha).sin();
-//                 let z = (i * alpha).cos();
-//                 let y = (j * beta).sin() * r;
-//                 let x = (j * beta).cos() * r;
-//
-//                 positions.push(Vertex {
-//                     position: (x, y, z),
-//                 });
-//             }
-//         }
-//
-//         positions.push(Vertex {
-//             position: (0.0, 0.0, -1.0),
-//         });
-//
-//         let mut indices: Vec<u16> =
-//             Vec::with_capacity((3 * slices * (2 + 2 * (stacks - 2))) as usize);
-//
-//         for i in 1..slices {
-//             indices.push(0);
-//             indices.push(i);
-//             indices.push(i + 1);
-//         }
-//         indices.push(0);
-//         indices.push(slices);
-//         indices.push(1);
-//
-//         for j in 1..stacks - 1 {
-//             for i in 1..slices {
-//                 indices.push(1 + (j - 1) * slices + i);
-//                 indices.push(0 + (j - 1) * slices + i);
-//                 indices.push(0 + j * slices + i);
-//
-//                 indices.push(0 + j * slices + i);
-//                 indices.push(1 + j * slices + i);
-//                 indices.push(1 + (j - 1) * slices + i);
-//             }
-//
-//             indices.push(1 + (j - 1) * slices);
-//             indices.push(slices + (j - 1) * slices);
-//             indices.push(slices + j * slices);
-//
-//             indices.push(slices + j * slices);
-//             indices.push(1 + j * slices);
-//             indices.push(1 + (j - 1) * slices);
-//         }
-//
-//         for i in 1..slices {
-//             indices.push(size - 1);
-//             indices.push(size - i - 1);
-//             indices.push(size - i - 2);
-//         }
-//         indices.push(size - 1);
-//         indices.push(size - slices - 1);
-//         indices.push(size - 2);
-//
-//         Sphere {
-//             positions: glium::VertexBuffer::new(facade, &positions).unwrap(),
-//             indices: glium::IndexBuffer::new(
-//                 facade,
-//                 glium::index::PrimitiveType::TrianglesList,
-//                 &indices,
-//             )
-//             .unwrap(),
-//         }
-//     }
-//
-//     pub fn get_positions(&self) -> &glium::VertexBuffer<Vertex> {
-//         &self.positions
-//     }
-//     pub fn get_indices(&self) -> &glium::IndexBuffer<u16> {
-//         &self.indices
-//     }
-// }
+struct DDALine {
+    points: Vec<f32>,
+    x1: [f32; 2],
+    x2: [f32; 2],
+}
+
+impl DDALine {
+    fn generate_dda_line(&mut self) {
+        let dx = self.x1[0] - self.x2[0];
+        let dy = self.x1[1] - self.x2[1];
+
+        let steps: u32;
+        if dx.abs() > dy.abs() {
+            steps = dx.abs() as u32;
+        } else {
+            steps = dy.abs() as u32;
+        }
+
+        let x_increment = dx / steps as f32;
+        let y_increment = dy / steps as f32;
+
+        let mut x = self.x1[0];
+        let mut y = self.x1[1];
+
+        for _ in 0..steps {
+            x += x_increment;
+            y += y_increment;
+            self.points.push(x.round());
+            self.points.push(y.round());
+            // Z, R, G, B
+            self.points.append(&mut [1.0,1.0,1.0,1.0].to_vec());
+        }
+    }
+}
 
 unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
     let vertex_shader =
@@ -115,9 +56,6 @@ unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
 
     renderer.gl.UseProgram(renderer.program.unwrap());
 
-    // renderer.gl.DeleteShader(vertex_shader);
-    // renderer.gl.DeleteShader(fragment_shader);
-
     renderer.gl.GenVertexArrays(1, &mut renderer.vao);
     renderer.gl.BindVertexArray(renderer.vao);
 
@@ -126,20 +64,40 @@ unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
 
     #[rustfmt::skip]
     let vertex_data: Vec<f32> = vec![
-        -0.5, -0.5, 1.0, 1.0, 0.0, 0.0,
-        0.5, -0.5, 1.0, 0.0, 1.0, 0.0,
-        -0.5, 0.5, 1.0, 0.0, 0.0, 1.0,
-        0.5, 0.5, 1.0, 1.0, 0.0, 0.0,
-        -0.5, 0.5, 1.0, 0.0, 0.0, 1.0,
-        0.5, -0.5, 1.0, 0.0, 1.0, 0.0,
+        // Blue Triangle 1
+        -0.3, 0.45, 1.0,0.0, 0.2196, 0.572549,
+        -0.3, -0.013, 1.0,0.0, 0.2196, 0.572549,
+        0.43125, -0.013, 1.0,0.0, 0.2196, 0.572549,
+
+        // Blue Triangle 2
+        -0.3, 0.25625, 1.0,0.0, 0.2196, 0.572549,
+        -0.3, -0.45, 1.0,0.0, 0.2196, 0.572549,
+        0.41, -0.45, 1.0,0.0, 0.2196, 0.572549,
+
+
+        // Red Triangle 1
+        -0.27296875, 0.4015625, 1.0, 0.862745, 0.078431, 0.235294,
+        -0.27296875, 0.0140625, 1.0, 0.862745, 0.078431, 0.235294,
+        0.344375, 0.0140625, 1.0, 0.862745, 0.078431, 0.235294,
+
+        // Red Triangle 2
+        -0.274, 0.19890625, 1.0, 0.862745, 0.078431, 0.235294,
+        -0.274, -0.42234375, 1.0, 0.862745, 0.078431, 0.235294,
+        0.34421875, -0.42234375, 1.0, 0.862745, 0.078431, 0.235294,
     ];
 
-    #[rustfmt::skip]
-    let vertex_data2: Vec<f32> = vec![
-        0.5, 0.5, 1.0, 1.0, 0.0, 0.0,
-        -0.5, 0.5, 1.0, 0.0, 1.0, 0.0,
-        0.5, -0.5, 1.0, 0.0, 0.0, 1.0,
-    ];
+    let vertex_indices: Vec<u32> = (0..vertex_data.len() as u32).collect();
+
+    let mut indices: gl::types::GLuint = std::mem::zeroed();
+
+    renderer.gl.GenBuffers(1, &mut indices);
+    renderer.gl.BindBuffer(gl::ELEMENT_ARRAY_BUFFER, indices);
+    renderer.gl.BufferData(
+        gl::ELEMENT_ARRAY_BUFFER,
+        (vertex_indices.len() * std::mem::size_of::<u32>()) as gl::types::GLsizeiptr,
+        vertex_indices.as_ptr() as *const _,
+        gl::STATIC_DRAW,
+    );
 
     renderer.gl.BufferData(
         gl::ARRAY_BUFFER,
@@ -148,14 +106,11 @@ unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
         gl::STATIC_DRAW,
     );
 
+    // POSITION Attribute
     let pos_attrib = renderer.gl.GetAttribLocation(
         renderer.program.unwrap(),
         b"position\0".as_ptr() as *const _,
     );
-
-    let color_attrib = renderer
-        .gl
-        .GetAttribLocation(renderer.program.unwrap(), b"color\0".as_ptr() as *const _);
 
     renderer.gl.VertexAttribPointer(
         pos_attrib as gl::types::GLuint,
@@ -166,13 +121,18 @@ unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
         std::ptr::null(),
     );
 
+    // COLOR Attribute
+    let color_attrib = renderer
+        .gl
+        .GetAttribLocation(renderer.program.unwrap(), b"color\0".as_ptr() as *const _);
+
     renderer.gl.VertexAttribPointer(
         color_attrib as gl::types::GLuint,
         3,
         gl::FLOAT,
         0,
         6 * std::mem::size_of::<f32>() as gl::types::GLsizei,
-        (3 * std::mem::size_of::<f32>()) as *const () as *const _,
+        (3 * std::mem::size_of::<f32>()) as *const _,
     );
 
     renderer
@@ -184,8 +144,15 @@ unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
         .EnableVertexAttribArray(color_attrib as gl::types::GLuint);
 
     renderer.gl.ClearColor(0.1, 0.1, 0.1, 0.9);
+
     renderer.gl.Clear(gl::COLOR_BUFFER_BIT);
-    renderer.gl.DrawArrays(gl::TRIANGLES, 0, 6);
+
+    renderer.gl.DrawElements(
+        gl::POINTS,
+        vertex_indices.len() as i32,
+        gl::UNSIGNED_INT,
+        0 as *const _,
+    );
 }
 
 const VERTEX_SHADER_SOURCE: &[u8] = b"
