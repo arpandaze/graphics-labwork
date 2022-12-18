@@ -1,41 +1,12 @@
+mod circle;
+mod line;
+mod ellipse;
 mod opengl;
 
+use circle::Circle;
+use ellipse::Ellipse;
+use line::{Line, LineAlgorithm};
 use opengl::*;
-
-struct DDALine {
-    points: Vec<f32>,
-    x1: [f32; 2],
-    x2: [f32; 2],
-}
-
-impl DDALine {
-    fn generate_dda_line(&mut self) {
-        let dx = self.x1[0] - self.x2[0];
-        let dy = self.x1[1] - self.x2[1];
-
-        let steps: u32;
-        if dx.abs() > dy.abs() {
-            steps = dx.abs() as u32;
-        } else {
-            steps = dy.abs() as u32;
-        }
-
-        let x_increment = dx / steps as f32;
-        let y_increment = dy / steps as f32;
-
-        let mut x = self.x1[0];
-        let mut y = self.x1[1];
-
-        for _ in 0..steps {
-            x += x_increment;
-            y += y_increment;
-            self.points.push(x.round());
-            self.points.push(y.round());
-            // Z, R, G, B
-            self.points.append(&mut [1.0,1.0,1.0,1.0].to_vec());
-        }
-    }
-}
 
 unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
     let vertex_shader =
@@ -62,29 +33,9 @@ unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
     renderer.gl.GenBuffers(1, &mut renderer.vbo);
     renderer.gl.BindBuffer(gl::ARRAY_BUFFER, renderer.vbo);
 
-    #[rustfmt::skip]
-    let vertex_data: Vec<f32> = vec![
-        // Blue Triangle 1
-        -0.3, 0.45, 1.0,0.0, 0.2196, 0.572549,
-        -0.3, -0.013, 1.0,0.0, 0.2196, 0.572549,
-        0.43125, -0.013, 1.0,0.0, 0.2196, 0.572549,
+    let line = Ellipse::new([500,800], 200, 100);
 
-        // Blue Triangle 2
-        -0.3, 0.25625, 1.0,0.0, 0.2196, 0.572549,
-        -0.3, -0.45, 1.0,0.0, 0.2196, 0.572549,
-        0.41, -0.45, 1.0,0.0, 0.2196, 0.572549,
-
-
-        // Red Triangle 1
-        -0.27296875, 0.4015625, 1.0, 0.862745, 0.078431, 0.235294,
-        -0.27296875, 0.0140625, 1.0, 0.862745, 0.078431, 0.235294,
-        0.344375, 0.0140625, 1.0, 0.862745, 0.078431, 0.235294,
-
-        // Red Triangle 2
-        -0.274, 0.19890625, 1.0, 0.862745, 0.078431, 0.235294,
-        -0.274, -0.42234375, 1.0, 0.862745, 0.078431, 0.235294,
-        0.34421875, -0.42234375, 1.0, 0.862745, 0.078431, 0.235294,
-    ];
+    let vertex_data = line.get_normalized_coordinate();
 
     let vertex_indices: Vec<u32> = (0..vertex_data.len() as u32).collect();
 

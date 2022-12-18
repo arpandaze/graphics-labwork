@@ -28,7 +28,7 @@ pub fn init(draw_function: Option<unsafe fn(&mut Renderer) -> ()>) {
 
     let window_builder = Some(
         WindowBuilder::new()
-            .with_title("Biopix")
+            .with_title("Lab Works")
             .with_transparent(false),
     );
 
