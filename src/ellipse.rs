@@ -7,16 +7,16 @@ pub struct Ellipse {
 
 impl Ellipse {
     pub fn new(centre: [i32; 2], a: i32, b: i32) -> Self {
-        let mut circle = Self {
+        let mut ellipse = Self {
             points: vec![],
             centre,
             a,
             b,
         };
 
-        circle.generate_midpoint_ellipse();
+        ellipse.generate_midpoint_ellipse();
 
-        return circle;
+        return ellipse;
     }
 
     fn generate_midpoint_ellipse(&mut self) {
@@ -79,6 +79,22 @@ impl Ellipse {
                     (item[0] as f32 / 800.0) - 1.0,
                     (item[1] as f32 / 600.0) - 1.0,
                     0.0, // Z
+                    1.0, // R
+                    1.0, // G
+                    1.0, // B
+                ]
+            })
+            .collect();
+    }
+
+    pub fn get_2d_normalized_coordinate(&self) -> Vec<f32> {
+        return self
+            .points
+            .iter()
+            .flat_map(|item| {
+                [
+                    (item[0] as f32 / 800.0) - 1.0,
+                    (item[1] as f32 / 600.0) - 1.0,
                     1.0, // R
                     1.0, // G
                     1.0, // B

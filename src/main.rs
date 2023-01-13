@@ -1,7 +1,9 @@
 mod circle;
-mod line;
 mod ellipse;
+mod flag;
+mod line;
 mod opengl;
+mod cube;
 
 use circle::Circle;
 use ellipse::Ellipse;
@@ -33,7 +35,14 @@ unsafe fn drawer(renderer: &mut opengl::Renderer) -> () {
     renderer.gl.GenBuffers(1, &mut renderer.vbo);
     renderer.gl.BindBuffer(gl::ARRAY_BUFFER, renderer.vbo);
 
-    let line = Ellipse::new([500,800], 200, 100);
+    let tm = [
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+    ];
+
+    let mut line = circle::Circle::new([500, 500], 150);
+    line.transform(tm);
 
     let vertex_data = line.get_normalized_coordinate();
 
@@ -128,5 +137,8 @@ void main() {
 \0";
 
 pub fn main() {
-    opengl::init(Some(drawer));
+    // let circle = Circle::new([350, 400], 150);
+    unsafe {
+        opengl::init(Some(cube::Cube::drawer));
+    }
 }
